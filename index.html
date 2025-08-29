@@ -6,25 +6,30 @@
   <title>Starry profile</title>
   <style>
     /* live 2d */
+    /* Live2D container: use responsive dimensions (vw/vh) + limits, adapt to various screens */
     #l2d-container{
-    position: fixed;
-    right: 12px;
-    bottom: 12px;
-    width: 280px;   /* ← adjust here to  */
-    height: 420px;  /* ← adjust here to  */
-    z-index: 9;
-    pointer-events: none; /*set auto if needed*/
+      position: fixed;
+      right: 12px;
+      bottom: 12px;
+      z-index: 9;
+      pointer-events: none;  
+      width:  clamp(180px, 42vw, 300px);    /* Min 180px, usually 42% viewport width, max 300px */
+      height: clamp(260px, 58vh, 480px);    /* Min 260px, usually 58% viewport height, max 480px */
     }
-    /* ------- Base / Reset ------- */
-    * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { height: 100%; }
-    body {
-      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-      color: #e5e7eb; /* slate-200 */
-      background: #000; /* fallback in case canvas fails */
-      line-height: 1.55;
-      overflow: auto; /* allow page to scroll – canvas sits behind */
+
+    /* Canvas always fills container, don't hardcode pixels like 260x360 anymore */
+    #l2d-container canvas{
+      width: 100% !important;
+      height: 100% !important;
+      display: block;
+      pointer-events: none;
     }
+
+    /* Tighter margins on small screens (optional) */
+    @media (max-width: 640px){
+      #l2d-container{ right: 6px; bottom: 6px; }
+    }
+
 
     /* ------- Background Canvas ------- */
     #space {
@@ -388,7 +393,7 @@
 
 
 <!-- Place before </body>; container above script -->
-<div id="l2d-container" style="position:fixed;right:10px;bottom:10px;z-index:9;pointer-events:none;"></div>
+  <div id="l2d-container" style="position:fixed;right:10px;bottom:10px;z-index:9;pointer-events:none;"></div>
 
 <!-- Pixi v6 (matches plugin; don't use v7) -->
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.8/dist/browser/pixi.min.js"></script>
@@ -403,7 +408,6 @@
 <!-- <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script> -->
 <!-- Backup source (if jsDelivr is slow): https://unpkg.com/pixi-live2d-display@0.4.0/dist/cubism4.min.js -->
 
-<div id="l2d-container" aria-hidden="true"></div>
 
 <script>
   window.addEventListener('load', function () {
@@ -412,58 +416,47 @@
 
     const host = document.getElementById('l2d-container');
 
-    // Create Pixi with container dimensions (no longer resizeTo: window)
     const app = new PIXI.Application({
       backgroundAlpha: 0,
-      width: host.clientWidth,
-      height: host.clientHeight,
       antialias: true,
-      resolution: window.devicePixelRatio || 1,
-      autoDensity: true
+      autoDensity: true,
+      resolution: Math.min(window.devicePixelRatio || 1, 2),
+      resizeTo: host                 // ← Key: renderer automatically equals container size
     });
     host.appendChild(app.view);
 
-    // const MODEL_URL = './huonululu_5/huonululu_5.model3.json';
-    const MODEL_URL = './lafei_4/lafei_4.model3.json';
-    // const MODEL_URL = './live2d-master/live2d_3/model/Azue Lane(JP)/lafei_4/lafei_4.model3.json';
-    // const MODEL_URL = './live2d-master/live2d_3/model/Azue Lane(JP)/dafeng_2/dafeng_2.model3.json';
-
-    // const MODEL_URL = './live2d-master/live2d_3/model/Azue Lane(JP)/shengluyisi_2/shengluyisi_2.model3.json';
-    // const MODEL_URL = './live2d-master/live2d_3/model/Azue Lane(JP)/beierfasite_2/beierfasite_2.model3.json';
-
+    const MODEL_URL = './lafei_4/lafei_4.model3.json'; // Your model path
 
     PIXI.live2d.Live2DModel.from(MODEL_URL).then((model) => {
       app.stage.addChild(model);
 
-      // Bottom center anchor point
+            // Bottom center anchor: x=0.5 (horizontal center), y=1 (bottom)
       model.anchor.set(0.5, 1);
 
-      // —— Proportional fitting to container (including some padding margin) ——
-      function fit() {
-        const padding = 0.06; // Inner padding
-        const maxW = app.renderer.width  * (1 - padding * 2);
-        const maxH = app.renderer.height * (1 - padding * 2);
+      function fit(){
+        const w = app.renderer.width;
+        const h = app.renderer.height;
 
+        // Use "pixel padding" instead of ratio, considering small screens
+        const padPx = Math.round(Math.min(24, Math.max(8, h * 0.06))); // 8~24px
+        const maxW  = w - padPx * 2;
+        const maxH  = h - padPx * 2;
+
+        // First restore scale then calculate
         model.scale.set(1);
         const s = Math.min(maxW / model.width, maxH / model.height);
         model.scale.set(s);
-        // adjust: negative -> left,  positive -> right
-        const nudgeX = -50;
-        model.x = app.renderer.width / 2 + nudgeX;
-         // adjust: negative -> move up,  positive -> move down
-        const nudgeY = -150; 
-        model.y = app.renderer.height - app.renderer.height * padding + nudgeY;
-        }
 
+        // Center + bottom align, preserve padding
+        model.x = w * 0.5 - 80;          // Center
+        model.y = h - padPx - 180;        // Bottom with padPx margin
+      }
 
       fit();
-
-      // If you change #l2d-container width/height, or window scaling, re-fit
-      window.addEventListener('resize', () => {
-        app.renderer.resize(host.clientWidth, host.clientHeight);
-        fit();
-      });
+      // Auto resize when container size changes; only need to re-fit here
+      window.addEventListener('resize', fit);
     }).catch(err => console.error('Live2D loading failed:', err));
+
   });
 </script>
 
