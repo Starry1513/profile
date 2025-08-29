@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Starry profile</title>
+  <style>
+    /* live 2d */
+    #l2d-container{
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    width: 280px;   /* ← adjust here to  */
+    height: 420px;  /* ← adjust here to  */
+    z-index: 9;
+    pointer-events: none; /*set auto if needed*/
+    }
+    /* ------- Base / Reset ------- */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { height: 100%; }
+    body {
+      font-family: system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: #e5e7eb; /* slate-200 */
+      background: #000; /* fallback in case canvas fails */
+      line-height: 1.55;
+      overflow: auto; /* allow page to scroll – canvas sits behind */
+    }
+
+    /* ------- Background Canvas ------- */
+    #space {
+      position: fixed;
+      inset: 0; /* top/right/bottom/left: 0 */
+      width: 100%;
+      height: 100%;
+      z-index: -2; /* behind everything */
+      display: block;
+    }
+    /* A subtle overlay to improve text contrast */
+    .bg-overlay {
+      position: fixed; inset: 0; z-index: -1; pointer-events: none;
+      background:
+        radial-gradient(1200px 600px at 10% -10%, rgba(59,130,246,0.20), transparent 60%),
+        radial-gradient(800px 400px at 90% 110%, rgba(236,72,153,0.14), transparent 60%),
+        linear-gradient(180deg, rgba(0,0,0,0.22), rgba(0,0,0,0.45));
+    }
+
+    /* ------- Layout ------- */
+    .page { max-width: 980px; margin: 0 auto; padding: 24px 16px 96px; }
+    header.site {
+      position: sticky; top: 0; backdrop-filter: blur(6px);
+      background: linear-gradient(180deg, rgba(2,6,23,0.65), rgba(2,6,23,0));
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+      z-index: 10;
+    }
+    .nav { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; }
+    .brand { font-weight: 700; letter-spacing: 0.4px; color: #fff; }
+    .links { display: flex; gap: 12px; flex-wrap: wrap; }
+    .links a { color: #cbd5e1; text-decoration: none; padding: 6px 10px; border-radius: 10px; border: 1px solid transparent; }
+    .links a:hover { color: #fff; border-color: rgba(255,255,255,0.12); background: rgba(255,255,255,0.06); }
+
+    /* ------- Card / Sections ------- */
+    .card {
+      background: rgba(15,23,42,0.35); /* slate-900 @ 55% */
+      border: 1px solid rgba(255,255,255,0.06);
+      border-radius: 16px; box-shadow: 0 12px 40px rgba(0,0,0,0.45);
+      backdrop-filter: blur(8px);
+    }
+    .hero { display: grid; grid-template-columns: 140px 1fr; gap: 18px; align-items: center; padding: 18px; }
+    .avatar {
+      width: 140px; height: 140px; border-radius: 999px; overflow: hidden; border: 2px solid rgba(255,255,255,0.12);
+      background: linear-gradient(180deg, #0b1020, #1f2937);
+      display: grid; place-items: center; font-weight: 700; font-size: 38px; color: #94a3b8;
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+
+    h1 { font-size: 28px; color: #fff; }
+    .muted { color: #cbd5e1; }
+    .row { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; }
+    .btn { cursor: pointer; text-decoration: none; border-radius: 999px; padding: 10px 14px; border: 1px solid #334155; background: rgba(30,58,138,0.45); color: #fff; }
+    .btn:hover { filter: brightness(1.06); }
+
+    section { margin-top: 22px; }
+    section > .card { padding: 18px; }
+    section h2 { font-size: 18px; margin-bottom: 12px; color: #fff; letter-spacing: 0.3px; }
+
+    .chips { display: flex; gap: 8px; flex-wrap: wrap; }
+    .chip { padding: 6px 10px; border-radius: 999px; background: rgba(148,163,184,0.15); border: 1px solid rgba(148,163,184,0.25); color: #e2e8f0; font-size: 13px; }
+
+    .projects { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+    .project { padding: 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.08); background: rgba(2,6,23,0.35); }
+    .project h3 { font-size: 16px; color: #fff; margin-bottom: 4px; }
+    .project p { color: #cbd5e1; font-size: 14px; }
+
+    footer { opacity: 0.7; text-align: center; padding: 28px 0 40px; font-size: 13px; }
+
+    /* ------- Small helper for section spacing on mobile ------- */
+    @media (max-width: 640px) {
+      .hero { grid-template-columns: 1fr; text-align: center; }
+      .avatar { margin: 0 auto; }
+      .links { justify-content: center; }
+    }
+
+    /* ------- Reduce Motion Preference ------- */
+    @media (prefers-reduced-motion: reduce) {
+      .hint-motion { display: none; }
+    }
+  
+    /* ------- Live2D (widget) positioning ------- */
+    /* The widget library injects a canvas; we pin it bottom-right and keep clicks passing through */
+    #live2d-widget, #live2dcanvas {
+      position: fixed; right: 12px; bottom: 12px; z-index: 9;
+      pointer-events: none; /* so it won't block page links; remove if you want interactions */
+    }
+    @media (max-width: 640px) {
+      #live2d-widget, #live2dcanvas { transform: scale(0.85); transform-origin: 100% 100%; }
+    }
+  
+    /* Live2D (Pixi) positioning; keep non-blocking by default */
+    #l2d-container { position: fixed; right: 10px; bottom: 10px; z-index: 9; pointer-events: none; }
+    #l2d-container canvas { pointer-events: none; width: 260px; height: 360px; }
+    @media (max-width: 640px) {
+      #l2d-container canvas { width: 200px; height: 280px; }
+    }
+  </style>
+  
+</head>
+<body>
+  <!-- Fullscreen starfield background -->
+  <canvas id="space"></canvas>
+  <div class="bg-overlay" aria-hidden="true"></div>
+
+  <!-- Page content -->
+  <header class="site">
+    <div class="page nav">
+      <div class="brand">Starry profile </div>
+      <nav class="links" aria-label="Primary">
+        <a href="#about">About</a>
+        <a href="#skills">Skills</a>
+        <a href="#projects">Projects</a>
+        <a href="#contact">Contact</a>
+      </nav>
+    </div>
+  </header>
+
+  <main class="page">
+    <section aria-labelledby="profile-title">
+      <div class="card hero">
+        <div class="avatar" aria-hidden="true">
+          <!-- Replace with your image if you have one -->
+          <img src="https://image2url.com/images/1756452847533-bbaebd6c-4e39-43d8-8654-212ddf1e8f69.jpg" alt="profile" />
+          <!-- <span>🐐</span> -->
+        </div>
+        <div>
+          <h1 id="profile-title">Hi, I'm <strong> Starry (Yu Jiang)</strong></h1>
+          <p class="muted"> University of New South Wales (UNSW)</p>
+          <br>
+            <p class="muted">Languages &  Javascript, Typescript,  </p>
+            <p class="muted">Frameworks & Node.js, python, Mongodb, FastAPI</p>
+            <p class="muted">Tools & Git, Docker, Postgresql, Vercel</p>
+          <div class="row" style="margin-top:12px">
+            <a class="btn" href="#projects">View Projects</a>
+            <a class="btn" href="#contact">Get in Touch</a>
+          </div>
+          <p class="muted" style="margin-top:10px; font-size: 12px;">Scroll, or use your mouse wheel to change star speed (<span class="hint-motion">motion</span>)</p>
+        </div>
+      </div>
+    </section>
+
+    <section id="about" aria-labelledby="about-title">
+      <div class="card">
+        <h2 id="about-title">About me</h2>
+        <p class="muted">
+            I build this for devsoc enrollment.</p>
+      </div>
+    </section>
+
+    <section id="skills" aria-labelledby="skills-title">
+      <div class="card">
+        <h2 id="skills-title">Skills</h2>
+        <div class="chips">
+          <span class="chip">HTML</span>
+          <span class="chip">CSS / Tailwind</span>
+          <span class="chip">JavaScript</span>
+          <span class="chip">Typescript</span>
+          <span class="chip">Postgresql</span>
+          <span class="chip">GitHub</span>
+
+          <span class="chip">C/C++</span>
+          <span class="chip">Java</span>
+          <span class="chip">Python</span>
+          <span class="chip">Docker</span>
+          <span class="chip">Vercel</span>
+          <span class="chip">GitHub</span>
+        </div>
+      </div>
+    </section>
+
+    <section id="projects" aria-labelledby="projects-title">
+      <div class="card">
+        <h2 id="projects-title">Projects</h2>
+        <div class="projects">
+<!--             
+          <article class="project">
+            <h3> Live Quiz Platform</h3>
+            <p src="https://kahoot-bumar0g76-starrys-projects-829ce122.vercel.app/">
+                Developed a real-time quiz platform inspired by Kahoot using TypeScript, React, Node.js, and Socket.io</p>
+
+          </article>
+          <article class="project">
+            <h3>Questioner</h3>
+            <p src="https://questioner-pi86.vercel.app/">
+                Paste a YouTube video link and adaptive related test.
+            </p>
+          </article> -->
+        <article class="project">
+        <h3>
+            <a href="https://kahoot-bumar0g76-starrys-projects-829ce122.vercel.app/"
+            target="_blank" rel="noopener noreferrer">
+            Live Quiz Platform
+            </a>
+        </h3>
+        <p>Developed a real-time quiz platform inspired by Kahoot using TypeScript, React, Node.js, and Socket.io</p>
+        </article>
+
+        <article class="project">
+        <h3>
+            <a href="https://questioner-pi86.vercel.app/"
+            target="_blank" rel="noopener noreferrer">
+            Questioner
+            </a>
+        </h3>
+        <p>Paste a YouTube video link and adaptive related test.</p>
+        </article>
+
+
+        </div>
+      </div>
+    </section>
+
+    <section id="contact" aria-labelledby="contact-title">
+      <div class="card">
+        <h2 id="contact-title">Contact</h2>
+        <p class="muted">
+        Email: <a href="z5564122@ad.unsw.edu.au" style="color:#93c5fd">z5564122@ad.unsw.edu.au</a> 
+        · GitHub: <a href="https://github.com/Starry1513" target="_blank" rel="noopener" style="color:#93c5fd">Starry1513</a></p>
+        
+      </div>
+    </section>
+
+    <footer>
+      © <span id="year"></span> Starry front‑ends· Built with HTML, CSS & a sprinkle of Canvas ✨
+    </footer>
+  </main>
+  
+
+  <script>
+    // ======= Starfield Background (optimized & beginner-friendly) =======
+    const canvas = document.getElementById('space');
+    const ctx = canvas.getContext('2d');
+
+    const cfg = {
+      focalLength: 400,       // Focal length (updated based on screen size in resize())
+      mouseInfluence: 0.22,   // Mouse influence coefficient
+      speed: 1.0,             // Base speed, adjustable with scroll wheel
+      maxStarSize: 8,       // Maximum star radius
+      fadeStartZ: 220,        // Distance where fading starts
+      fadeEndZ: 90            // Distance where completely disappears
+    };
+
+    let stars = [];
+    let cx = 0, cy = 0;      // Canvas center (in pixels)
+    let mx = 0, my = 0;      // Mouse offset relative to center
+
+    function createStars(count) {
+      stars = Array.from({ length: count }, () => ({
+        x: Math.random() * canvas.width,
+        y: Math.random() * canvas.height,
+        z: Math.random() * canvas.width,
+        o: 0.6 + Math.random() * 0.4, // Opacity 0.3~1.0
+        px: 0, py: 0, pz: 0           // Previous frame coordinates (for trails)
+      }));
+    }
+
+    function resize() {
+      const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+      const w = Math.floor(window.innerWidth * dpr);
+      const h = Math.floor(window.innerHeight * dpr);
+      canvas.width = w; canvas.height = h;
+      canvas.style.width = window.innerWidth + 'px';
+      canvas.style.height = window.innerHeight + 'px';
+      cx = w / 2; cy = h / 2;
+      cfg.focalLength = Math.min(w, h) * 0.9; // Update focal length based on canvas
+
+      // Adaptive quantity: density (one star per 2,200 pixels), limited between 800~4000
+      const density = 800;
+      const target = Math.max(800, Math.min(4000, Math.floor((w * h) / density)));
+      createStars(target);
+    }
+
+    function pos(x, y, z) {
+      const scale = cfg.focalLength / z;
+      return {
+        x: (x - cx) * scale + cx,
+        y: (y - cy) * scale + cy,
+        r: Math.min(cfg.maxStarSize, scale) // Radius
+      };
+    }
+
+    function alpha(z) {
+      if (z <= cfg.fadeStartZ) {
+        return Math.max(0, Math.min(1, (z - cfg.fadeEndZ) / (cfg.fadeStartZ - cfg.fadeEndZ)));
+      }
+      return 1;
+    }
+
+    function move() {
+      const len = stars.length;
+      for (let i = 0; i < len; i++) {
+        const s = stars[i];
+        // Save previous frame
+        s.px = s.x; s.py = s.y; s.pz = s.z;
+        // Move towards observer
+        s.z -= cfg.speed;
+        // Mouse micro-offset (decreases with z)
+        s.x += (mx * cfg.mouseInfluence) / Math.max(60, s.z);
+        s.y += (my * cfg.mouseInfluence) / Math.max(60, s.z);
+
+        // Reset (return to far distance after passing through lens)
+        if (s.z <= cfg.fadeEndZ) {
+          s.z = canvas.width;
+          s.x = Math.random() * canvas.width;
+          s.y = Math.random() * canvas.height;
+          s.px = s.x; s.py = s.y; s.pz = s.z;
+        }
+      }
+    }
+
+    function draw() {
+      // Background clear
+      ctx.fillStyle = 'rgb(0,10,20)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      const fast = cfg.speed > 10; // Draw trails only at high speed
+      const len = stars.length;
+      for (let i = 0; i < len; i++) {
+        const s = stars[i];
+        const curr = pos(s.x, s.y, s.z);
+        const a = alpha(s.z) * s.o;
+
+        if (fast) {
+          const prev = pos(s.px, s.py, s.pz);
+          ctx.beginPath();
+          ctx.moveTo(prev.x, prev.y);
+          ctx.lineTo(curr.x, curr.y);
+          ctx.strokeStyle = `rgba(255,255,255,${0.28 * a})`;
+          ctx.lineWidth = curr.r;
+          ctx.stroke();
+        }
+
+        ctx.beginPath();
+        ctx.arc(curr.x, curr.y, curr.r, 0, Math.PI * 2);
+        ctx.fillStyle = `rgba(255,255,255,${a})`;
+        ctx.fill();
+      }
+    }
+
+    function loop() {
+      move();
+      draw();
+      requestAnimationFrame(loop);
+    }
+
+    // Events
+    window.addEventListener('resize', resize);
+    document.addEventListener('mousemove', (e) => { mx = (e.clientX * (window.devicePixelRatio || 1)) - cx; my = (e.clientY * (window.devicePixelRatio || 1)) - cy; });
+    document.addEventListener('wheel', (e) => {
+      cfg.speed = Math.max(0.1, Math.min(50, cfg.speed - e.deltaY * 0.01));
+    }, { passive: true });
+
+    // Init
+    resize();
+    loop();
+
+    // Footer year
+    document.getElementById('year').textContent = new Date().getFullYear();
+  </script>
+
+
+
+<!-- Place before </body>; container above script -->
+<div id="l2d-container" style="position:fixed;right:10px;bottom:10px;z-index:9;pointer-events:none;"></div>
+
+<!-- Pixi v6 (matches plugin; don't use v7) -->
+<script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.8/dist/browser/pixi.min.js"></script>
+
+<!-- Cubism Core (required for Cubism3/4) -->
+<script src="https://cubism.live2d.com/sdk-web/cubismcore/live2dcubismcore.min.js"></script>
+
+<!-- pixi-live2d-display: use unlocked version or pin to 0.4.0 (choose one of the two methods) -->
+<!-- Recommended unlocked version (follows latest 0.4.0 documentation): -->
+<script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display/dist/cubism4.min.js"></script>
+<!-- Or fixed 0.4.0: -->
+<!-- <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script> -->
+<!-- Backup source (if jsDelivr is slow): https://unpkg.com/pixi-live2d-display@0.4.0/dist/cubism4.min.js -->
+
+<div id="l2d-container" aria-hidden="true"></div>
+
+<script>
+  window.addEventListener('load', function () {
+    if (!window.PIXI) { console.error('PIXI not loaded'); return; }
+    if (!PIXI.live2d || !PIXI.live2d.Live2DModel) { console.error('pixi-live2d-display not loaded'); return; }
+
+    const host = document.getElementById('l2d-container');
+
+    // Create Pixi with container dimensions (no longer resizeTo: window)
+    const app = new PIXI.Application({
+      backgroundAlpha: 0,
+      width: host.clientWidth,
+      height: host.clientHeight,
+      antialias: true,
+      resolution: window.devicePixelRatio || 1,
+      autoDensity: true
+    });
+    host.appendChild(app.view);
+
+    const MODEL_URL = './huonululu_5/huonululu_5.model3.json';
+    // const MODEL_URL = './live2d-master/live2d_3/model/Azue Lane(JP)/lafei_4/lafei_4.model3.json';
+    // const MODEL_URL = './live2d-master/live2d_3/model/Azue Lane(JP)/dafeng_2/dafeng_2.model3.json';
+
+    // const MODEL_URL = './live2d-master/live2d_3/model/Azue Lane(JP)/shengluyisi_2/shengluyisi_2.model3.json';
+    // const MODEL_URL = './live2d-master/live2d_3/model/Azue Lane(JP)/beierfasite_2/beierfasite_2.model3.json';
+
+
+    PIXI.live2d.Live2DModel.from(MODEL_URL).then((model) => {
+      app.stage.addChild(model);
+
+      // Bottom center anchor point
+      model.anchor.set(0.5, 1);
+
+      // —— Proportional fitting to container (including some padding margin) ——
+      function fit() {
+        const padding = 0.06; // Inner padding
+        const maxW = app.renderer.width  * (1 - padding * 2);
+        const maxH = app.renderer.height * (1 - padding * 2);
+
+        model.scale.set(1);
+        const s = Math.min(maxW / model.width, maxH / model.height);
+        model.scale.set(s);
+        // adjust: negative -> left,  positive -> right
+        const nudgeX = 10;
+        model.x = app.renderer.width / 2 + nudgeX;
+         // adjust: negative -> move up,  positive -> move down
+        const nudgeY = -150; 
+        model.y = app.renderer.height - app.renderer.height * padding + nudgeY;
+        }
+
+
+      fit();
+
+      // If you change #l2d-container width/height, or window scaling, re-fit
+      window.addEventListener('resize', () => {
+        app.renderer.resize(host.clientWidth, host.clientHeight);
+        fit();
+      });
+    }).catch(err => console.error('Live2D loading failed:', err));
+  });
+</script>
+
+
+
+</body>
