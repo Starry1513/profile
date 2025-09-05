@@ -224,7 +224,6 @@
     .zzz span:nth-child(3){ animation-delay:1.6s; transform: translate(20px,0) scale(1.4)}
 
     .dream-window{ position:absolute; left:40px; top:34px; width:120px; height:120px; border-radius:999px; overflow:hidden; box-shadow:0 8px 24px rgba(2,6,23,0.5), inset 0 0 28px rgba(147,197,253,0.6); border:1px solid rgba(147,197,253,0.45); display:grid; place-items:center; }
-   /* 新的（不会露矩形边） */
   #dream-sky,
   #dream-sky-fab{
     width: 100%;
@@ -233,7 +232,6 @@
     transform: none;
   }
 
-  /* 双保险：canvas 也跟父容器一起变圆 */
   .dream-window canvas{
     border-radius: 50%;
   }
@@ -548,7 +546,8 @@ function goToDream(){
   const mainSite = document.getElementById('site-main');
   if(siteHeader) siteHeader.hidden = true;
   if(mainSite) mainSite.hidden = true;
-  if(l2d) l2d.style.display = 'none';
+  showLive2D();
+
   // slow down starfield a bit for calm vibe
   try { cfg.speed = Math.min(cfg.speed, 4); cfg.speed = Math.max(0.8, cfg.speed - 1.5); } catch(e){}
   // scroll top for consistent framing
@@ -574,58 +573,67 @@ function goToDream(){
 <!-- <script src="https://cdn.jsdelivr.net/npm/pixi-live2d-display@0.4.0/dist/cubism4.min.js"></script> -->
 <!-- Backup source (if jsDelivr is slow): https://unpkg.com/pixi-live2d-display@0.4.0/dist/cubism4.min.js -->
 
-
 <script>
-  window.addEventListener('load', function () {
-    if (!window.PIXI) { console.error('PIXI not loaded'); return; }
-    if (!PIXI.live2d || !PIXI.live2d.Live2DModel) { console.error('pixi-live2d-display not loaded'); return; }
+let L2D = { inited: false, app: null, model: null, fit: null };
 
-    const host = document.getElementById('l2d-container');
+async function initLive2D() {
+  if (L2D.inited) return;
+  if (!window.PIXI || !PIXI.live2d || !PIXI.live2d.Live2DModel) {
+    console.error('PIXI / pixi-live2d-display not loaded'); 
+    return;
+  }
 
-    const app = new PIXI.Application({
-      backgroundAlpha: 0,
-      antialias: true,
-      autoDensity: true,
-      resolution: Math.min(window.devicePixelRatio || 1, 2),
-      resizeTo: host
-    });
-    host.appendChild(app.view);
+  const host = document.getElementById('l2d-container');
+  if (!host) return;
 
-    // const MODEL_URL = './lafei_4/lafei_4.model3.json';
-    const MODEL_URL = './huonululu_5/huonululu_5.model3.json';
+  host.style.display = 'block';
 
-    PIXI.live2d.Live2DModel.from(MODEL_URL).then((model) => {
-      app.stage.addChild(model);
-
-            // Bottom center anchor: x=0.5 (horizontal center), y=1 (bottom)
-      model.anchor.set(0.5, 1);
-
-      function fit(){
-        const w = app.renderer.width;
-        const h = app.renderer.height;
-
-        // Use "pixel padding" instead of ratio, considering small screens
-        const padPx = Math.round(Math.min(24, Math.max(8, h * 0.06))); // 8~24px
-        const maxW  = w - padPx * 2;
-        const maxH  = h - padPx * 2;
-
-        // First restore scale then calculate
-        model.scale.set(1);
-        const s = Math.min(maxW / model.width, maxH / model.height);
-        model.scale.set(s);
-
-        // Center + bottom align, preserve padding
-        model.x = w * 0.5 - 80;          // Center
-        model.y = h - padPx - 180;        // Bottom with padPx margin
-      }
-
-      fit();
-      // Auto resize when container size changes; only need to re-fit here
-      window.addEventListener('resize', fit);
-    }).catch(err => console.error('Live2D loading failed:', err));
-
+  const app = new PIXI.Application({
+    backgroundAlpha: 0,
+    antialias: true,
+    autoDensity: true,
+    resolution: Math.min(window.devicePixelRatio || 1, 2),
+    resizeTo: host
   });
+  host.appendChild(app.view);
+
+  const MODEL_URL = './lafei_4/lafei_4.model3.json';
+  const model = await PIXI.live2d.Live2DModel.from(MODEL_URL);
+  app.stage.addChild(model);
+  model.anchor.set(0.5, 1);
+
+  function fit(){
+    const w = host.clientWidth || 300;
+    const h = host.clientHeight || 360;
+    model.scale.set(1);
+    const s = Math.min((w-16)/model.width, (h-16)/model.height);
+    model.scale.set(s);
+    model.x = w * 0.5 - 80;
+    model.y = h - 180;
+  }
+  fit();
+
+
+  const ro = new ResizeObserver(()=> fit());
+  ro.observe(host);
+  window.addEventListener('resize', fit);
+
+  L2D = { inited: true, app, model, fit };
+}
+
+
+function showLive2D(){
+  const host = document.getElementById('l2d-container');
+  if (!host) return;
+  if (!L2D.inited) {
+    initLive2D();
+  } else {
+    host.style.display = 'block';
+    requestAnimationFrame(()=> L2D.fit && L2D.fit());
+  }
+}
 </script>
+
 
 <script>
   // ===== Dream portal interactions =====
@@ -704,7 +712,7 @@ function enterSite(){
     document.body.dataset.mode = 'main'; // show overlay, normal UI
     siteHeader.hidden = false;
     mainSite.hidden = false;
-    if(l2d) l2d.style.display = 'block';
+    showLive2D();
     try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
   }, 580);
 }
@@ -785,7 +793,8 @@ sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
         intro.style.display='none';
         document.body.dataset.mode = 'main';
         siteHeader.hidden = false; mainSite.hidden = false;
-        if(l2d) l2d.style.display = 'block';
+        showLive2D();
+
         try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
       }, 10);
     });
@@ -799,7 +808,7 @@ sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
       DreamFX.concealTo(introDreamWindow, ()=>{
         // After contraction, hide site chrome
         siteHeader.hidden = true; mainSite.hidden = true;
-        if(l2d) l2d.style.display = 'none';
+        showLive2D();
         window.scrollTo({ top: 0, behavior: 'smooth' });
         try { cfg.speed = Math.min(cfg.speed, 4); cfg.speed = Math.max(0.8, cfg.speed - 1.5); } catch(e){}
       });
