@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Starry profile</title>
+  <title>Starry profile (Dream edition)</title>
   <style>
     /* live 2d */
     /* Live2D container: use responsive dimensions (vw/vh) + limits, adapt to various screens */
@@ -13,8 +13,9 @@
       bottom: 12px;
       z-index: 9;
       pointer-events: none;  
-      width:  clamp(180px, 42vw, 300px);    /* Min 180px, usually 42% viewport width, max 300px */
-      height: clamp(260px, 58vh, 480px);    /* Min 260px, usually 58% viewport height, max 480px */
+      width:  clamp(180px, 42vw, 300px);
+      height: clamp(260px, 58vh, 480px);
+      display: none; /* start hidden until entering dream */
     }
 
     /* Canvas always fills container, don't hardcode pixels like 260x360 anymore */
@@ -108,6 +109,7 @@
     /* ------- Reduce Motion Preference ------- */
     @media (prefers-reduced-motion: reduce) {
       .hint-motion { display: none; }
+      .zzz, .dream-bubble { animation: none !important; }
     }
   
     /* ------- Live2D (widget) positioning ------- */
@@ -126,16 +128,148 @@
     @media (max-width: 640px) {
       #l2d-container canvas { width: 200px; height: 280px; }
     }
-  </style>
+
+    /* ===================== SLEEP SCENE (new) ===================== */
+    .sleep-card { position: relative; overflow: hidden; }
+    #sleep-scene {
+      position: relative;
+      height: 220px;
+      border-radius: 14px;
+      border: 1px dashed rgba(255,255,255,0.12);
+      background:
+        radial-gradient(600px 300px at 20% -20%, rgba(59,130,246,0.25), transparent 60%),
+        linear-gradient(180deg, rgba(2,6,23,0.6), rgba(2,6,23,0.85));
+      display: grid;
+      place-items: center;
+      isolation: isolate;
+    }
+    .bed {
+      position: absolute; bottom: 24px; left: 26px; right: 26px; height: 110px;
+      border-radius: 16px; background: rgba(15,23,42,0.85);
+      border: 1px solid rgba(148,163,184,0.15);
+      box-shadow: inset 0 4px 24px rgba(0,0,0,0.35);
+    }
+    .pillow {
+      position: absolute; right: 40px; bottom: 120px; width: 90px; height: 40px;
+      background: #e2e8f0; border-radius: 12px; box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+    }
+    .sleeper {
+      position: absolute; right: 78px; bottom: 132px; width: 52px; height: 52px; border-radius: 50%;
+      background: linear-gradient(180deg,#fecdd3,#fda4af);
+      box-shadow: 0 6px 20px rgba(0,0,0,0.35);
+    }
+    .blanket {
+      position: absolute; right: 36px; bottom: 94px; width: 210px; height: 80px;
+      background: linear-gradient(180deg, rgba(59,130,246,0.55), rgba(37,99,235,0.75));
+      border-radius: 18px 18px 12px 12px; border: 1px solid rgba(96,165,250,0.35);
+      transform-origin: 0% 100%;
+      animation: breathe 4s ease-in-out infinite;
+    }
+    @keyframes breathe {
+      0%,100% { transform: translateY(0) rotate(-1deg); }
+      50% { transform: translateY(4px) rotate(1deg); }
+    }
+
+    .zzz { position: absolute; right: 24px; bottom: 180px; font-weight: 700; color: #cbd5e1; opacity: 0.9; }
+    .zzz span { position: absolute; font-size: 14px; animation: floatZ 3s linear infinite; }
+    .zzz span:nth-child(2){ animation-delay: .8s; transform: translate(10px, 0) scale(1.2); }
+    .zzz span:nth-child(3){ animation-delay: 1.6s; transform: translate(20px, 0) scale(1.4); }
+    @keyframes floatZ { 0%{ transform: translate(0,0); opacity:.85 } 100%{ transform: translate(0,-40px); opacity:0 } }
+
+    .dream-bubble {
+      --size: 76px;
+      position: absolute; left: 24px; bottom: 120px; width: var(--size); height: var(--size); border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.7));
+      box-shadow: 0 10px 24px rgba(2,6,23,0.45), inset 0 0 20px rgba(147,197,253,0.65);
+      display: grid; place-items: center; cursor: pointer; z-index: 2;
+      animation: bob 3.6s ease-in-out infinite;
+    }
+    .dream-bubble::after { /* small bubble */
+      content: ""; position: absolute; right: -14px; bottom: -14px; width: 18px; height: 18px; border-radius: 50%;
+      background: radial-gradient(circle at 30% 30%, rgba(255,255,255,0.9), rgba(255,255,255,0.6));
+      box-shadow: inset 0 0 10px rgba(147,197,253,0.45);
+    }
+    @keyframes bob { 0%,100%{ transform: translateY(0) } 50%{ transform: translateY(8px)} }
+    .dream-bubble span { font-size: 12px; color: #0f172a; font-weight: 700; letter-spacing: .6px; text-transform: uppercase; }
+
+    .hint { position: absolute; left: 20px; bottom: 18px; color: #cbd5e1; font-size: 12px; opacity: .9; }
+    .hint kbd{ background: rgba(148,163,184,0.18); border:1px solid rgba(148,163,184,0.35); padding: 2px 6px; border-radius:8px; }
+
+    /* ===================== DREAM OVERLAY (portal) ===================== */
+
+    .dream-wrap{ max-width: 1080px; margin: 0 auto; padding: 32px 16px 56px; }
+    .dream-header{ display:flex; align-items:center; justify-content:space-between; gap:12px; margin-bottom: 20px; }
+    .dream-title{ font-size: 28px; color:#fff; letter-spacing:.4px; }
+    .close-btn{ cursor:pointer; border-radius:999px; border:1px solid rgba(148,163,184,0.35); padding:8px 12px; background: rgba(30,41,59,0.55); color:#fff; }
+    .close-btn:hover{ filter:brightness(1.05) }
+
+    .dream-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(240px,1fr)); gap:14px; }
+    .dream-card{ padding:14px; border-radius:12px; background: rgba(15,23,42,0.55); border:1px solid rgba(148,163,184,0.2); }
+    .dream-card h3{ color:#fff; font-size:16px; margin-bottom:6px; }
+    .dream-card p{ color:#cbd5e1; font-size:14px; }
+
+    .dream-tip{ margin: 8px 0 16px; font-size: 13px; color: #cbd5e1; opacity:.9 }
+      /* ============== INTRO (start screen) ============== */
+    #intro{ position:fixed; inset:0; z-index:50; pointer-events:none; }
+    .intro-wrap{ position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); width:min(960px, 92vw); pointer-events:auto; }
+    .intro-card{ position:relative; padding:20px; border-radius:18px; background:rgba(15,23,42,0.35); border:1px solid rgba(148,163,184,0.25); backdrop-filter: blur(8px); box-shadow:0 20px 60px rgba(0,0,0,0.45); }
+    .sleep-stage{ position:relative; height:320px; border-radius:14px; border:1px dashed rgba(255,255,255,0.12); background: radial-gradient(600px 300px at 20% -20%, rgba(59,130,246,0.18), transparent 60%); overflow:hidden; isolation:isolate; }
+    .bed{ position:absolute; left:28px; right:28px; bottom:28px; height:140px; border-radius:16px; background:rgba(15,23,42,0.85); border:1px solid rgba(148,163,184,0.15); box-shadow:inset 0 4px 24px rgba(0,0,0,0.35); }
+    .pillow{ position:absolute; right:56px; bottom:178px; width:110px; height:46px; background:#e2e8f0; border-radius:12px; box-shadow:0 6px 16px rgba(0,0,0,0.25); }
+    .sleeper{ position:absolute; right:98px; bottom:194px; width:60px; height:60px; border-radius:999px; background:linear-gradient(180deg,#fecdd3,#fda4af); box-shadow:0 6px 20px rgba(0,0,0,0.35); }
+    .blanket{ position:absolute; right:44px; bottom:126px; width:260px; height:96px; background:linear-gradient(180deg, rgba(59,130,246,0.55), rgba(37,99,235,0.75)); border-radius:18px 18px 12px 12px; border:1px solid rgba(96,165,250,0.35); transform-origin:0% 100%; animation:breathe 4s ease-in-out infinite; }
+    .zzz{ position:absolute; right:28px; bottom:240px; font-weight:700; color:#cbd5e1; opacity:.9 }
+    .zzz span{ position:absolute; font-size:16px; animation: floatZ 3s linear infinite; }
+    .zzz span:nth-child(2){ animation-delay:.8s; transform: translate(10px,0) scale(1.2)}
+    .zzz span:nth-child(3){ animation-delay:1.6s; transform: translate(20px,0) scale(1.4)}
+
+    .dream-window{ position:absolute; left:40px; top:34px; width:120px; height:120px; border-radius:999px; overflow:hidden; box-shadow:0 8px 24px rgba(2,6,23,0.5), inset 0 0 28px rgba(147,197,253,0.6); border:1px solid rgba(147,197,253,0.45); display:grid; place-items:center; }
+   /* 新的（不会露矩形边） */
+  #dream-sky,
+  #dream-sky-fab{
+    width: 100%;
+    height: 100%;
+    display: block;
+    transform: none;
+  }
+
+  /* 双保险：canvas 也跟父容器一起变圆 */
+  .dream-window canvas{
+    border-radius: 50%;
+  }
+
+    .enter-btn{ position:absolute; left:40px; top:170px; border-radius:999px; padding:10px 14px; border:1px solid rgba(148,163,184,0.35); background:rgba(30,41,59,0.6); color:#fff; cursor:pointer }
+    .enter-btn:hover{ filter:brightness(1.06) }
+
+    /* Simple fade */
+    .fade-out{ animation: fadeOut .6s ease forwards }
+    @keyframes fadeOut{ to{ opacity:0; visibility:hidden } }
+
+    /* ---- Do not dim starfield while sleeping (intro mode) ---- */
+    body[data-mode="intro"] .bg-overlay{ display:none; }
+    body[data-mode="intro"] #intro .intro-card{ background: transparent; border: none; box-shadow: none; backdrop-filter: none; }
+    body[data-mode="intro"] #intro .sleep-stage{ background: transparent; }
+    body[data-mode="intro"] #intro .sleep-stage .bed{ background: rgba(15,23,42,0.7); }
+    body[data-mode="intro"] #intro .sleep-stage .blanket{ background: linear-gradient(180deg, rgba(59,130,246,0.45), rgba(37,99,235,0.6)); }
+    /* ===== Circular reveal mask for dream transition ===== */
+    #dream-reveal{ position:fixed; inset:0; z-index:60; pointer-events:none; opacity:0;
+      background:
+        radial-gradient(1200px 600px at 70% -10%, rgba(147,197,253,0.18), transparent 60%),
+        radial-gradient(800px 400px at 10% 110%, rgba(248,113,113,0.16), transparent 60%),
+        linear-gradient(180deg, rgba(2,6,23,0.85), rgba(2,6,23,0.95));
+      clip-path: circle(var(--r, 0px) at var(--cx, 50%) var(--cy, 50%));
+      transition: clip-path 720ms cubic-bezier(.22,.9,.23,1), opacity 180ms ease; }
+    #dream-reveal.active{ opacity:1; }
+</style>
   
 </head>
-<body>
+<body data-mode="intro">
   <!-- Fullscreen starfield background -->
   <canvas id="space"></canvas>
   <div class="bg-overlay" aria-hidden="true"></div>
 
   <!-- Page content -->
-  <header class="site">
+  <header id="site-header" class="site" hidden>
     <div class="page nav">
       <div class="brand">Starry profile </div>
       <nav class="links" aria-label="Primary">
@@ -143,11 +277,34 @@
         <a href="#skills">Skills</a>
         <a href="#projects">Projects</a>
         <a href="#contact">Contact</a>
+        <a href="#" id="sleep-link" title="Return to Dream">Sleep</a>
       </nav>
     </div>
   </header>
 
-  <main class="page">
+  <!-- =================== INTRO (start screen) =================== -->
+    <section id="intro">
+    <div class="intro-wrap">
+      <div class="intro-card">
+        <h2 style="color:#fff; margin-bottom:10px;">Dreaming…</h2>
+        <div class="sleep-stage">
+          <div class="bed"></div>
+          <div class="blanket"></div>
+          <div class="pillow"></div>
+          <div class="sleeper"></div>
+          <div class="zzz"><span>Z</span><span>Z</span><span>Z</span></div>
+
+          <div class="dream-window" aria-hidden="true">
+            <canvas id="dream-sky"></canvas>
+          </div>
+
+          <button id="enter-site" class="enter-btn" type="button">Enter Dream →</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <main id="site-main" class="page" hidden>
     <section aria-labelledby="profile-title">
       <div class="card hero">
         <div class="avatar" aria-hidden="true">
@@ -170,7 +327,6 @@
         </div>
       </div>
     </section>
-
     <section id="about" aria-labelledby="about-title">
       <div class="card">
         <h2 id="about-title">About me</h2>
@@ -204,19 +360,6 @@
       <div class="card">
         <h2 id="projects-title">Projects</h2>
         <div class="projects">
-<!--             
-          <article class="project">
-            <h3> Live Quiz Platform</h3>
-            <p src="https://kahoot-bumar0g76-starrys-projects-829ce122.vercel.app/">
-                Developed a real-time quiz platform inspired by Kahoot using TypeScript, React, Node.js, and Socket.io</p>
-
-          </article>
-          <article class="project">
-            <h3>Questioner</h3>
-            <p src="https://questioner-pi86.vercel.app/">
-                Paste a YouTube video link and adaptive related test.
-            </p>
-          </article> -->
         <article class="project">
         <h3>
             <a href="https://kahoot-bumar0g76-starrys-projects-829ce122.vercel.app/"
@@ -390,7 +533,30 @@
     document.getElementById('year').textContent = new Date().getFullYear();
   </script>
 
+<script>
+// ===== Return to Dream (Sleep) =====
+function goToDream(){
+  // show intro again
+  const intro = document.getElementById('intro');
+  if(!intro) return;
+  intro.classList.remove('fade-out');
+  intro.style.display = '';
+  // set mode to intro so overlay disappears and backgrounds go transparent
+  document.body.dataset.mode = 'intro';
+  // hide site chrome & live2d
+  const siteHeader = document.getElementById('site-header');
+  const mainSite = document.getElementById('site-main');
+  if(siteHeader) siteHeader.hidden = true;
+  if(mainSite) mainSite.hidden = true;
+  if(l2d) l2d.style.display = 'none';
+  // slow down starfield a bit for calm vibe
+  try { cfg.speed = Math.min(cfg.speed, 4); cfg.speed = Math.max(0.8, cfg.speed - 1.5); } catch(e){}
+  // scroll top for consistent framing
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 
+
+</script>
 
 <!-- Place before </body>; container above script -->
   <div id="l2d-container" style="position:fixed;right:10px;bottom:10px;z-index:9;pointer-events:none;"></div>
@@ -421,11 +587,12 @@
       antialias: true,
       autoDensity: true,
       resolution: Math.min(window.devicePixelRatio || 1, 2),
-      resizeTo: host                 // ← Key: renderer automatically equals container size
+      resizeTo: host
     });
     host.appendChild(app.view);
 
-    const MODEL_URL = './lafei_4/lafei_4.model3.json'; // Your model path
+    // const MODEL_URL = './lafei_4/lafei_4.model3.json';
+    const MODEL_URL = './huonululu_5/huonululu_5.model3.json';
 
     PIXI.live2d.Live2DModel.from(MODEL_URL).then((model) => {
       app.stage.addChild(model);
@@ -460,6 +627,190 @@
   });
 </script>
 
+<script>
+  // ===== Dream portal interactions =====
+  const portal = document.getElementById('dream-portal');
+  const closeBtn = document.getElementById('close-dream');
 
+  function openDream(){
+    overlay.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden'; // prevent background scroll
+    // optional: accelerate stars a bit for a warp effect
+    try { window.__oldSpeed = cfg.speed; cfg.speed = Math.min(20, cfg.speed + 6); } catch (e){}
+  }
+  function closeDream(){
+    overlay.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+    try { if (typeof window.__oldSpeed === 'number') cfg.speed = window.__oldSpeed; } catch (e){}
+    // focus back for accessibility
+    portal.focus();
+  }
+
+  portal?.addEventListener('click', openDream);
+  closeBtn?.addEventListener('click', closeDream);
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape' && overlay.getAttribute('aria-hidden') === 'false'){ closeDream(); }});
+</script>
+
+<script>
+// ===== Small starfield inside the dream window (beginner friendly) =====
+(function(){
+  const c = document.getElementById('dream-sky');
+  if(!c) return;
+  const x = c.getContext('2d');
+  let w, h, dpr;
+  let stars = [];
+  function resize(){
+    dpr = Math.max(1, Math.min(2, window.devicePixelRatio||1));
+    const rect = c.parentElement.getBoundingClientRect();
+    w = Math.floor(rect.width * dpr); h = Math.floor(rect.height * dpr);
+    c.width = w; c.height = h; c.style.width = rect.width + 'px'; c.style.height = rect.height + 'px';
+    stars = Array.from({length: 80}, ()=>({
+      x: Math.random()*w,
+      y: Math.random()*h,
+      r: Math.random()*1.8 + 0.4,
+      t: Math.random()*Math.PI*2
+    }));
+  }
+  function draw(){
+    x.fillStyle = 'rgb(3,8,23)';
+    x.fillRect(0,0,w,h);
+    for(const s of stars){
+      s.t += 0.04;
+      const a = 0.5 + Math.sin(s.t)*0.5; // twinkle
+      x.beginPath();
+      x.arc(s.x, s.y, s.r, 0, Math.PI*2);
+      x.fillStyle = 'rgba(255,255,255,'+a.toFixed(2)+')';
+      x.fill();
+    }
+    requestAnimationFrame(draw);
+  }
+  window.addEventListener('resize', resize);
+  resize(); draw();
+})();
+
+// ===== Enter -> hide intro, show main, (optionally) boost background stars =====
+const intro = document.getElementById('intro');
+const mainSite = document.getElementById('site-main');
+const siteHeader = document.getElementById('site-header');
+const l2d = document.getElementById('l2d-container');
+const sleepLink = document.getElementById('sleep-link');
+const enterBtn = document.getElementById('enter-site');
+const introDreamWindow = document.querySelector('#intro .dream-window');
+
+function enterSite(){
+  intro.classList.add('fade-out');
+  setTimeout(()=>{
+    intro.style.display='none';
+    document.body.dataset.mode = 'main'; // show overlay, normal UI
+    siteHeader.hidden = false;
+    mainSite.hidden = false;
+    if(l2d) l2d.style.display = 'block';
+    try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
+  }, 580);
+}
+
+enterBtn?.addEventListener('click', enterSite);
+introDreamWindow?.addEventListener('click', enterSite);
+
+// Bind Sleep nav here so variable is defined
+sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
+</script>
+
+<!-- Circular reveal overlay -->
+<div id="dream-reveal" aria-hidden="true"></div>
+
+<script>
+// ===== Helpers for circular reveal / conceal =====
+(function(){
+  function radiusToCover(cx, cy){
+    const w = window.innerWidth, h = window.innerHeight;
+    const dx = Math.max(cx, w - cx);
+    const dy = Math.max(cy, h - cy);
+    return Math.hypot(dx, dy);
+  }
+  function setCenter(overlay, cx, cy){
+    overlay.style.setProperty('--cx', cx + 'px');
+    overlay.style.setProperty('--cy', cy + 'px');
+  }
+  window.DreamFX = {
+    revealFrom(el, done){
+      const overlay = document.getElementById('dream-reveal');
+      if(!overlay || !el) return done?.();
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width/2; const cy = r.top + r.height/2;
+      setCenter(overlay, cx, cy);
+      overlay.style.setProperty('--r', '0px');
+      overlay.classList.add('active');
+      overlay.style.clipPath = `circle(0px at ${cx}px ${cy}px)`;
+      requestAnimationFrame(()=>{
+        const R = radiusToCover(cx, cy);
+        overlay.style.clipPath = `circle(${R}px at ${cx}px ${cy}px)`;
+        setTimeout(()=>{ overlay.classList.remove('active'); done?.(); }, 760);
+      });
+    },
+    concealTo(el, done){
+      const overlay = document.getElementById('dream-reveal');
+      if(!overlay || !el) return done?.();
+      const r = el.getBoundingClientRect();
+      const cx = r.left + r.width/2; const cy = r.top + r.height/2;
+      const R = radiusToCover(cx, cy);
+      setCenter(overlay, cx, cy);
+      overlay.classList.add('active');
+      overlay.style.clipPath = `circle(${R}px at ${cx}px ${cy}px)`;
+      requestAnimationFrame(()=>{
+        overlay.style.clipPath = `circle(0px at ${cx}px ${cy}px)`;
+        setTimeout(()=>{ overlay.classList.remove('active'); done?.(); }, 760);
+      });
+    }
+  };
+})();
+</script>
+
+<script>
+// ===== Wire the transitions into enter / sleep flows =====
+(function(){
+  const intro = document.getElementById('intro');
+  const siteHeader = document.getElementById('site-header');
+  const mainSite = document.getElementById('site-main');
+  const l2d = document.getElementById('l2d-container');
+  const introDreamWindow = document.querySelector('#intro .dream-window');
+  const enterBtn = document.getElementById('enter-site');
+  const sleepLink = document.getElementById('sleep-link');
+
+  function doEnter(){
+    // Play reveal from the intro dream window, then show main
+    DreamFX.revealFrom(introDreamWindow, ()=>{
+      intro.classList.add('fade-out');
+      setTimeout(()=>{
+        intro.style.display='none';
+        document.body.dataset.mode = 'main';
+        siteHeader.hidden = false; mainSite.hidden = false;
+        if(l2d) l2d.style.display = 'block';
+        try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
+      }, 10);
+    });
+  }
+
+  function doSleep(){
+    // First show intro so we can measure its dream window, but keep UI as is for one frame
+    intro.style.display='';
+    document.body.dataset.mode = 'intro';
+    requestAnimationFrame(()=>{
+      DreamFX.concealTo(introDreamWindow, ()=>{
+        // After contraction, hide site chrome
+        siteHeader.hidden = true; mainSite.hidden = true;
+        if(l2d) l2d.style.display = 'none';
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        try { cfg.speed = Math.min(cfg.speed, 4); cfg.speed = Math.max(0.8, cfg.speed - 1.5); } catch(e){}
+      });
+    });
+  }
+
+  enterBtn?.addEventListener('click', doEnter);
+  introDreamWindow?.addEventListener('click', doEnter);
+  sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); doSleep(); });
+})();
+</script>
 
 </body>
+</html>
