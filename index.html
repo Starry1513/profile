@@ -7,16 +7,17 @@
   <style>
     /* live 2d */
     /* Live2D container: use responsive dimensions (vw/vh) + limits, adapt to various screens */
-    #l2d-container{
-      position: fixed;
-      right: 12px;
-      bottom: 12px;
-      z-index: 9;
-      pointer-events: auto;  
-      width:  clamp(180px, 42vw, 300px);
-      height: clamp(260px, 58vh, 480px);
-      display: block; /* start hidden until entering dream */
-    }
+  #l2d-container{
+    position: fixed;
+    right: 12px;
+    bottom: 12px;
+    top: 12px;             
+    z-index: 9;
+    pointer-events: auto;
+    width: clamp(260px, 42vw, 520px); 
+
+  }
+
 
     /* Canvas always fills container, don't hardcode pixels like 260x360 anymore */
     #l2d-container canvas{
@@ -606,7 +607,7 @@ async function initLive2D() {
     model.scale.set(1);
     const s = Math.min((w-16)/model.width, (h-16)/model.height);
     model.scale.set(s);
-    model.x = w * 0.5 - 80;
+    model.x = w * 0.5 +90;
     model.y = h - 180;
   }
   fit();
@@ -767,14 +768,17 @@ function enterSite(){
   intro.classList.add('fade-out');
   setTimeout(()=>{
     intro.style.display='none';
-    document.body.dataset.mode = 'main'; // show overlay, normal UI
+    document.body.dataset.mode = 'main';
     siteHeader.hidden = false;
     mainSite.hidden = false;
-    showLive2D();
-    try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
-  }, 580);
-  // showLive2D();
 
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => {
+        showLive2D();
+        try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
+      });
+    });
+  }, 580);
 }
 
 enterBtn?.addEventListener('click', enterSite);
@@ -879,6 +883,39 @@ sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
   introDreamWindow?.addEventListener('click', doEnter);
   sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); doSleep(); });
 })();
+</script>
+<script>
+  function waitUntilVisible(el){
+    return new Promise(resolve=>{
+      const tick=()=>{ 
+        const r=el.getBoundingClientRect();
+        if(!el.hidden && r.width>0 && r.height>0) return resolve();
+        requestAnimationFrame(tick);
+      };
+      tick();
+    });
+  }
+
+  function waitLibs(){
+    return new Promise(resolve=>{
+      const tick=()=>{
+        if (window.PIXI && PIXI.live2d && PIXI.live2d.Live2DModel) return resolve();
+        requestAnimationFrame(tick);
+      };
+      tick();
+    });
+  }
+
+
+  window.addEventListener('DOMContentLoaded', async () => {
+    const host = document.getElementById('l2d-container');
+    if (!host) return;
+    host.style.display = 'block';
+    await waitUntilVisible(host);
+    await waitLibs();
+
+    requestAnimationFrame(()=> requestAnimationFrame(()=> showLive2D()));
+  });
 </script>
 
 </body>
