@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Starry profile (Dream edition)</title>
+  <title>Starry profile (Dream)</title>
   <style>
     /* live 2d */
     /* Live2D container: use responsive dimensions (vw/vh) + limits, adapt to various screens */
@@ -315,6 +315,10 @@
             <a class="btn" href="#contact">Get in Touch</a>
           </div>
           <p class="muted" style="margin-top:10px; font-size: 12px;">Scroll, or use your mouse wheel to change star speed (<span class="hint-motion">motion</span>)</p>
+          <p class="muted" style="margin-top:10px; font-size: 12px;">Single click = Touch body</p>
+          <p class="muted" style="margin-top:10px; font-size: 12px;">Double click = Touch special</p>
+          <p class="muted" style="margin-top:10px; font-size: 12px;">Right click = Touch head</p>
+          <p class="muted" style="margin-top:10px; font-size: 12px;"> Loops: idle ↔ fan</p>
         </div>
       </div>
     </section>
@@ -625,7 +629,7 @@ async function initLive2D() {
     idx = (idx + 1) % order.length;
   }
 
-  // 在 ticker 里：如果没在播，就播下一个
+  // loop display
   app.ticker.add(() => {
     const stopped = (typeof mm.isFinished === 'function') ? mm.isFinished() : !mm.isPlaying;
     if (stopped) {
@@ -636,37 +640,6 @@ async function initLive2D() {
 
   let singleTimer = null;
   const SINGLE_DELAY = 220;
-
-  function playBody(){
-    try { model.motion('TapBody'); 
-    console.log('[play] Touchbody');
-    }
-    catch(e){
-      console.log('error [play] Touchbody');
-    }
-  }
-  app.view.addEventListener('click', () => {
-    clearTimeout(singleTimer);
-    singleTimer = setTimeout(() => {
-      forceClick('TapBody');   // 中断并播 TapBody
-    }, SINGLE_DELAY);
-  });
-
-  // 双击：立即触发，并取消单击
-  app.view.addEventListener('dblclick', () => {
-    clearTimeout(singleTimer);
-    singleTimer = null;
-    forceClick('TapSpecial');  // 中断并播 TapSpecial
-  });
-
-  // 双击：立即触发，并取消单击
-  app.view.addEventListener('contextmenu', () => {
-    clearTimeout(singleTimer);
-    singleTimer = null;
-    forceClick('TapHead');  // 中断并播 TapSpecial
-  });
-
-
   function forceClick(groupOrAlias, index) {
     const mm = model.internalModel.motionManager;
     if (typeof mm.stopAllMotions === 'function') mm.stopAllMotions();
@@ -678,7 +651,25 @@ async function initLive2D() {
     }
   }
 
+  app.view.addEventListener('click', () => {
+    clearTimeout(singleTimer);
+    singleTimer = setTimeout(() => {
+      forceClick('TapBody'); 
+    }, SINGLE_DELAY);
+  });
 
+
+  app.view.addEventListener('dblclick', () => {
+    clearTimeout(singleTimer);
+    singleTimer = null;
+    forceClick('TapSpecial');  //  TapSpecial
+  });
+
+  app.view.addEventListener('contextmenu', () => {
+    clearTimeout(singleTimer);
+    singleTimer = null;
+    forceClick('TapHead');  
+  });
 
   const ro = new ResizeObserver(()=> fit());
   ro.observe(host);
