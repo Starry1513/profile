@@ -12,10 +12,10 @@
       right: 12px;
       bottom: 12px;
       z-index: 9;
-      pointer-events: none;  
+      pointer-events: auto;  
       width:  clamp(180px, 42vw, 300px);
       height: clamp(260px, 58vh, 480px);
-      display: none; /* start hidden until entering dream */
+      display: block; /* start hidden until entering dream */
     }
 
     /* Canvas always fills container, don't hardcode pixels like 260x360 anymore */
@@ -23,7 +23,7 @@
       width: 100% !important;
       height: 100% !important;
       display: block;
-      pointer-events: none;
+      pointer-events: auto;
     }
 
     /* Tighter margins on small screens (optional) */
@@ -116,19 +116,12 @@
     /* The widget library injects a canvas; we pin it bottom-right and keep clicks passing through */
     #live2d-widget, #live2dcanvas {
       position: fixed; right: 12px; bottom: 12px; z-index: 9;
-      pointer-events: none; /* so it won't block page links; remove if you want interactions */
+      pointer-events: auto; /* so it won't block page links; remove if you want interactions */
     }
     @media (max-width: 640px) {
       #live2d-widget, #live2dcanvas { transform: scale(0.85); transform-origin: 100% 100%; }
     }
   
-    /* Live2D (Pixi) positioning; keep non-blocking by default */
-    #l2d-container { position: fixed; right: 10px; bottom: 10px; z-index: 9; pointer-events: none; }
-    #l2d-container canvas { pointer-events: none; width: 260px; height: 360px; }
-    @media (max-width: 640px) {
-      #l2d-container canvas { width: 200px; height: 280px; }
-    }
-
     /* ===================== SLEEP SCENE (new) ===================== */
     .sleep-card { position: relative; overflow: hidden; }
     #sleep-scene {
@@ -314,9 +307,9 @@
           <h1 id="profile-title">Hi, I'm <strong> Starry (Yu Jiang)</strong></h1>
           <p class="muted"> University of New South Wales (UNSW)</p>
           <br>
-            <p class="muted">Languages &  Javascript, Typescript,  </p>
-            <p class="muted">Frameworks & Node.js, python, Mongodb, FastAPI</p>
-            <p class="muted">Tools & Git, Docker, Postgresql, Vercel</p>
+            <p class="muted">Languages:  Javascript, Typescript,  </p>
+            <p class="muted">Frameworks: Node.js, python, Mongodb, FastAPI</p>
+            <p class="muted">Tools:      Git, Docker, Postgresql, Vercel</p>
           <div class="row" style="margin-top:12px">
             <a class="btn" href="#projects">View Projects</a>
             <a class="btn" href="#contact">Get in Touch</a>
@@ -558,7 +551,8 @@ function goToDream(){
 </script>
 
 <!-- Place before </body>; container above script -->
-  <div id="l2d-container" style="position:fixed;right:10px;bottom:10px;z-index:9;pointer-events:none;"></div>
+  <div id="l2d-container" style="position:fixed;right:10px;bottom:10px;z-index:9;"></div>
+
 
 <!-- Pixi v6 (matches plugin; don't use v7) -->
 <script src="https://cdn.jsdelivr.net/npm/pixi.js@6.5.8/dist/browser/pixi.min.js"></script>
@@ -613,6 +607,78 @@ async function initLive2D() {
   }
   fit();
 
+  const mm = model.internalModel.motionManager;
+  const order = [
+    { high: ['Main', 0], low: 'main_1' },
+    { high: ['Main', 1], low: 'main_2' },
+  ];
+  let idx = 0;     
+
+
+  function playNextInOrder(priority = 1){
+    const [group, index] = order[idx].high;
+    try {
+      model.motion(group, index);
+    } catch (e) {
+        console.warn('[loop] error main', idx);
+    }
+    idx = (idx + 1) % order.length;
+  }
+
+  // 在 ticker 里：如果没在播，就播下一个
+  app.ticker.add(() => {
+    const stopped = (typeof mm.isFinished === 'function') ? mm.isFinished() : !mm.isPlaying;
+    if (stopped) {
+      playNextInOrder(1);
+    }
+  });
+
+
+  let singleTimer = null;
+  const SINGLE_DELAY = 220;
+
+  function playBody(){
+    try { model.motion('TapBody'); 
+    console.log('[play] Touchbody');
+    }
+    catch(e){
+      console.log('error [play] Touchbody');
+    }
+  }
+  app.view.addEventListener('click', () => {
+    clearTimeout(singleTimer);
+    singleTimer = setTimeout(() => {
+      forceClick('TapBody');   // 中断并播 TapBody
+    }, SINGLE_DELAY);
+  });
+
+  // 双击：立即触发，并取消单击
+  app.view.addEventListener('dblclick', () => {
+    clearTimeout(singleTimer);
+    singleTimer = null;
+    forceClick('TapSpecial');  // 中断并播 TapSpecial
+  });
+
+  // 双击：立即触发，并取消单击
+  app.view.addEventListener('contextmenu', () => {
+    clearTimeout(singleTimer);
+    singleTimer = null;
+    forceClick('TapHead');  // 中断并播 TapSpecial
+  });
+
+
+  function forceClick(groupOrAlias, index) {
+    const mm = model.internalModel.motionManager;
+    if (typeof mm.stopAllMotions === 'function') mm.stopAllMotions();
+    if (index !== undefined) {
+      console.log('[play] ', groupOrAlias);
+      model.motion(groupOrAlias, index);   // example ('Main', 0)
+    } else {
+      model.motion(groupOrAlias);          // example ('TapBody') / ('TapSpecial') / ('TapHead')
+    }
+  }
+
+
 
   const ro = new ResizeObserver(()=> fit());
   ro.observe(host);
@@ -620,6 +686,7 @@ async function initLive2D() {
 
   L2D = { inited: true, app, model, fit };
 }
+
 
 
 function showLive2D(){
@@ -715,6 +782,8 @@ function enterSite(){
     showLive2D();
     try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
   }, 580);
+  // showLive2D();
+
 }
 
 enterBtn?.addEventListener('click', enterSite);
