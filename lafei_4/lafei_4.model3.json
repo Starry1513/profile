@@ -28,11 +28,16 @@
       "Complete": [
         { "File": "motions/complete.motion3.json" }
       ],
+      "Email": [
+        { "File": "motions/mail.motion3.json" }
+      ],
+      "Mission" : [
+        { "File": "motions/mission_complete.motion3.json" }
+      ],
       "Misc": [
         { "File": "motions/home.motion3.json" },
         { "File": "motions/mail.motion3.json" },
         { "File": "motions/mission.motion3.json" },
-        { "File": "motions/mission_complete.motion3.json" },
         { "File": "motions/wedding.motion3.json" }
       ]
     }

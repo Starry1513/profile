@@ -545,6 +545,7 @@ function goToDream(){
   if(siteHeader) siteHeader.hidden = true;
   if(mainSite) mainSite.hidden = true;
   window.L2D
+  console.log("gotoDream")
   window.L2D.requestLoop('main'); 
 
   // slow down starfield a bit for calm vibe
@@ -633,7 +634,10 @@ async function initLive2D() {
     sleep: [ ['Main', 2] ],
     login: [ ['Login', 0], ['Main', 2]],
     complete: [ ['Complete', 0] ],                 
-    main:  [ ['Main', 0], ['Main', 1] ],    
+    main:  [ ['Main', 0], ['Main', 1] ],   
+    email:  [ ['Email', 0] ],
+    main2:   [ ['Main', 1] ],
+    mission:  [ ['Mission', 0] ],
   };
 
   let currentLoop = 'sleep';
@@ -809,35 +813,91 @@ const sleepLink = document.getElementById('sleep-link');
 const enterBtn = document.getElementById('enter-site');
 const introDreamWindow = document.querySelector('#intro .dream-window');
 
-function enterSite(){
-  intro.classList.add('fade-out');
-  setTimeout(()=>{
-    intro.style.display='none';
-    document.body.dataset.mode = 'main';
-    siteHeader.hidden = false;
-    mainSite.hidden = false;
-
-    requestAnimationFrame(() => {
-      requestAnimationFrame(() => {
-        window.L2D
-        window.L2D.requestLoop('main'); 
-        try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
-      });
-    });
-  }, 580);
-}
-
-// enterBtn?.addEventListener('click', enterSite);
-// introDreamWindow?.addEventListener('click', enterSite);
-
 // // Bind Sleep nav here so variable is defined
 sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
 </script>
 
+<script>
+
+const aboutLinks   = document.querySelectorAll('a[href="#about"]');
+const contactLinks = document.querySelectorAll('a[href="#contact"]');
+const skillsLinks  = document.querySelectorAll('a[href="#skills"]');
+const projectsLinks  = document.querySelectorAll('a[href="#projects"]');
+
+function enterMainThen(loopName, targetId) {
+
+  const intro = document.getElementById('intro');
+  const siteHeader = document.getElementById('site-header');
+  const mainSite = document.getElementById('site-main');
+  const introDreamWindow = document.querySelector('#intro .dream-window');
+
+  const go = () => {
+    try { window.L2D && window.L2D.requestLoop && window.L2D.requestLoop(loopName); } catch(e){}
+    const sec = document.getElementById(targetId);
+    sec && sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
+  };
+
+
+  if (document.body.dataset.mode === 'main') {
+    go(); 
+    return;
+  }
+
+  DreamFX.revealFrom(introDreamWindow, () => {
+    intro.classList.add('fade-out');
+    setTimeout(() => {
+      intro.style.display = 'none';
+      document.body.dataset.mode = 'main';
+      siteHeader.hidden = false;
+      mainSite.hidden = false;
+
+      requestAnimationFrame(() => requestAnimationFrame(go));
+    }, 10);
+  });
+}
+
+// About -> complete loop
+aboutLinks.forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    enterMainThen('complete', 'about');
+  });
+});
+
+// Contact -> email loop
+contactLinks.forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    enterMainThen('email', 'contact');
+  });
+});
+
+// Contact -> skills loop
+skillsLinks.forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    enterMainThen('main2', 'skills');
+  });
+});
+
+
+// Contact -> skills loop
+projectsLinks.forEach(a => {
+  a.addEventListener('click', (e) => {
+    e.preventDefault();
+    enterMainThen('mission', 'projects');
+  });
+});
+
+</script>
+
+
+
 <!-- Circular reveal overlay -->
 <div id="dream-reveal" aria-hidden="true"></div>
 
-<script>
+<script>  
 // ===== Helpers for circular reveal / conceal =====
 (function(){
   function radiusToCover(cx, cy){
@@ -904,6 +964,7 @@ sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
         document.body.dataset.mode = 'main';
         siteHeader.hidden = false; mainSite.hidden = false;
         window.L2D
+        console.log("doEnter")
         window.L2D.requestLoop('main'); 
 
         try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
@@ -920,6 +981,7 @@ sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
         // After contraction, hide site chrome
         siteHeader.hidden = true; mainSite.hidden = true;
         window.L2D
+        console.log("doSleep")
         window.L2D.requestLoop('sleep'); 
         window.scrollTo({ top: 0, behavior: 'smooth' });
         try { cfg.speed = Math.min(cfg.speed, 4); cfg.speed = Math.max(0.8, cfg.speed - 1.5); } catch(e){}
