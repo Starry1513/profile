@@ -670,6 +670,7 @@ async function initLive2D() {
     setLoop(window.L2D._pendingLoop, true);
     window.L2D._pendingLoop = null;
   } else {
+    console.log('login action start');
     setLoop('login', true);
   }
 
