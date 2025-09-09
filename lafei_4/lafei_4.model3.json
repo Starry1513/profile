@@ -22,13 +22,17 @@
         { "File": "motions/main_2.motion3.json" },
         { "File": "motions/main_3.motion3.json" }
       ],
+      "Login": [
+        { "File": "motions/login.motion3.json" }
+      ],
+      "Complete": [
+        { "File": "motions/complete.motion3.json" }
+      ],
       "Misc": [
         { "File": "motions/home.motion3.json" },
-        { "File": "motions/login.motion3.json" },
         { "File": "motions/mail.motion3.json" },
         { "File": "motions/mission.motion3.json" },
         { "File": "motions/mission_complete.motion3.json" },
-        { "File": "motions/complete.motion3.json" },
         { "File": "motions/wedding.motion3.json" }
       ]
     }

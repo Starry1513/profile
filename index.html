@@ -630,7 +630,9 @@ async function initLive2D() {
   const mm = model.internalModel.motionManager;
 
   const loops = {
-    sleep: [ ['Main', 2] ],                 
+    sleep: [ ['Main', 2] ],
+    login: [ ['Login', 0], ['Main', 2]],
+    complete: [ ['Complete', 0] ],                 
     main:  [ ['Main', 0], ['Main', 1] ],    
   };
 
@@ -668,7 +670,7 @@ async function initLive2D() {
     setLoop(window.L2D._pendingLoop, true);
     window.L2D._pendingLoop = null;
   } else {
-    setLoop('sleep', true);
+    setLoop('login', true);
   }
 
     // window.L2D.requestLoop('sleep');
@@ -719,8 +721,6 @@ async function initLive2D() {
   const ro = new ResizeObserver(()=> fit());
   ro.observe(host);
   window.addEventListener('resize', fit);
-
-  // L2D = { inited: true, app, model, fit };
 }
 
 
@@ -830,7 +830,7 @@ function enterSite(){
 // introDreamWindow?.addEventListener('click', enterSite);
 
 // // Bind Sleep nav here so variable is defined
-// sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
+sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
 </script>
 
 <!-- Circular reveal overlay -->
