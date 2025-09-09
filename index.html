@@ -611,9 +611,9 @@ async function initLive2D() {
   });
   host.appendChild(app.view);
 
-  // const MODEL_URL = './lafei_4/lafei_4.model3.json';
+  const MODEL_URL = './lafei_4/lafei_4.model3.json';
   // const MODEL_URL = './huonululu_5/huonululu_5.model3.json';
-  const MODEL_URL = './shengluyisi_3/shengluyisi_3.model3.json';
+  // const MODEL_URL = './shengluyisi_3/shengluyisi_3.model3.json';
   const model = await PIXI.live2d.Live2DModel.from(MODEL_URL);
   app.stage.addChild(model);
   model.anchor.set(0.5, 1);
