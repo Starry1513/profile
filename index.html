@@ -300,9 +300,7 @@
     <section aria-labelledby="profile-title">
       <div class="card hero">
         <div class="avatar" aria-hidden="true">
-          <!-- Replace with your image if you have one -->
           <img src="https://image2url.com/images/1756452847533-bbaebd6c-4e39-43d8-8654-212ddf1e8f69.jpg" alt="profile" />
-          <!-- <span>🐐</span> -->
         </div>
         <div>
           <h1 id="profile-title">Hi, I'm <strong> Starry (Yu Jiang)</strong></h1>
@@ -315,11 +313,13 @@
             <a class="btn" href="#projects">View Projects</a>
             <a class="btn" href="#contact">Get in Touch</a>
           </div>
+          <h3 class="muted" style="margin-top:10px; font-size: 24px;"> play instructions: <h3\>
           <p class="muted" style="margin-top:10px; font-size: 12px;">Scroll, or use your mouse wheel to change star speed (<span class="hint-motion">motion</span>)</p>
-          <p class="muted" style="margin-top:10px; font-size: 12px;">Single click = Touch body</p>
-          <p class="muted" style="margin-top:10px; font-size: 12px;">Double click = Touch special</p>
-          <p class="muted" style="margin-top:10px; font-size: 12px;">Right click = Touch head</p>
-          <p class="muted" style="margin-top:10px; font-size: 12px;"> Loops: idle ↔ fan</p>
+          <p class="muted" style="margin-top:10px; font-size: 12px;">Single click = Touch your wife's body</p>
+          <p class="muted" style="margin-top:10px; font-size: 12px;">Double click = Touch your wife's special</p>
+          <p class="muted" style="margin-top:10px; font-size: 12px;">Right click = Touch your wife's head</p>
+          <p class="muted" style="margin-top:10px; font-size: 12px;"> Loops1: sleep</p> 
+          <p class="muted" style="margin-top:10px; font-size: 12px;"> Loops2: ↔ fan ↔ finger</p>
         </div>
       </div>
     </section>
@@ -544,7 +544,8 @@ function goToDream(){
   const mainSite = document.getElementById('site-main');
   if(siteHeader) siteHeader.hidden = true;
   if(mainSite) mainSite.hidden = true;
-  showLive2D();
+  window.L2D
+  window.L2D.requestLoop('main'); 
 
   // slow down starfield a bit for calm vibe
   try { cfg.speed = Math.min(cfg.speed, 4); cfg.speed = Math.max(0.8, cfg.speed - 1.5); } catch(e){}
@@ -573,12 +574,25 @@ function goToDream(){
 <!-- Backup source (if jsDelivr is slow): https://unpkg.com/pixi-live2d-display@0.4.0/dist/cubism4.min.js -->
 
 <script>
-let L2D = { inited: false, app: null, model: null, fit: null };
+
+
+window.L2D = window.L2D || { inited:false, app:null, model:null, fit:null, setLoop:null, _pendingLoop:null };
+
+
+function requestLoop(name){
+  const L = window.L2D;
+  if (L.inited && typeof L.setLoop === 'function') {
+    L.setLoop(name, true);       
+  } else {
+    L._pendingLoop = name;    
+  }
+}
+window.L2D.requestLoop = requestLoop;
 
 async function initLive2D() {
-  if (L2D.inited) return;
+  if (window.L2D.inited) return;
   if (!window.PIXI || !PIXI.live2d || !PIXI.live2d.Live2DModel) {
-    console.error('PIXI / pixi-live2d-display not loaded'); 
+    console.error('PIXI / pixi-live2d-display not loaded');
     return;
   }
 
@@ -612,31 +626,61 @@ async function initLive2D() {
   }
   fit();
 
+    
   const mm = model.internalModel.motionManager;
-  const order = [
-    { high: ['Main', 0], low: 'main_1' },
-    { high: ['Main', 1], low: 'main_2' },
-  ];
-  let idx = 0;     
 
+  const loops = {
+    sleep: [ ['Main', 2] ],                 
+    main:  [ ['Main', 0], ['Main', 1] ],    
+  };
 
-  function playNextInOrder(priority = 1){
-    const [group, index] = order[idx].high;
-    try {
-      model.motion(group, index);
-    } catch (e) {
-        console.warn('[loop] error main', idx);
-    }
-    idx = (idx + 1) % order.length;
+  let currentLoop = 'sleep';
+  let idx = 0;
+
+  function playNext(){
+    const [group, index] = loops[currentLoop][idx];
+    try { model.motion(group, index); } catch(e){}
+    idx = (idx + 1) % loops[currentLoop].length;
   }
 
-  // loop display
+  function setLoop(name, immediate = true){
+    if (!loops[name]) return;
+    currentLoop = name;
+    idx = 0;
+    try { if (typeof mm.stopAllMotions === 'function') mm.stopAllMotions(); } catch(e){}
+    if (immediate) playNext();
+  }
+
+
   app.ticker.add(() => {
     const stopped = (typeof mm.isFinished === 'function') ? mm.isFinished() : !mm.isPlaying;
-    if (stopped) {
-      playNextInOrder(1);
-    }
+    if (stopped) playNext();
   });
+
+
+  window.L2D.inited = true;
+  window.L2D.app = app;
+  window.L2D.model = model;
+  window.L2D.fit = fit;
+  window.L2D.setLoop = setLoop;
+  window.L2D.requestLoop = requestLoop;
+  if (window.L2D._pendingLoop) {
+    setLoop(window.L2D._pendingLoop, true);
+    window.L2D._pendingLoop = null;
+  } else {
+    setLoop('sleep', true);
+  }
+
+    // window.L2D.requestLoop('sleep');
+
+    // loop display
+    // app.ticker.add(() => {
+    //   const stopped = (typeof mm.isFinished === 'function') ? mm.isFinished() : !mm.isPlaying;
+    //   if (stopped) {
+    //     playNextInOrder(1);
+    //     // model.motion('Main', 2);
+    //   }
+    // });
 
 
   let singleTimer = null;
@@ -676,7 +720,7 @@ async function initLive2D() {
   ro.observe(host);
   window.addEventListener('resize', fit);
 
-  L2D = { inited: true, app, model, fit };
+  // L2D = { inited: true, app, model, fit };
 }
 
 
@@ -774,18 +818,19 @@ function enterSite(){
 
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
-        showLive2D();
+        window.L2D
+        window.L2D.requestLoop('main'); 
         try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
       });
     });
   }, 580);
 }
 
-enterBtn?.addEventListener('click', enterSite);
-introDreamWindow?.addEventListener('click', enterSite);
+// enterBtn?.addEventListener('click', enterSite);
+// introDreamWindow?.addEventListener('click', enterSite);
 
-// Bind Sleep nav here so variable is defined
-sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
+// // Bind Sleep nav here so variable is defined
+// sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
 </script>
 
 <!-- Circular reveal overlay -->
@@ -857,7 +902,8 @@ sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
         intro.style.display='none';
         document.body.dataset.mode = 'main';
         siteHeader.hidden = false; mainSite.hidden = false;
-        showLive2D();
+        window.L2D
+        window.L2D.requestLoop('main'); 
 
         try { cfg.speed = Math.max(cfg.speed, 4); } catch(e){}
       }, 10);
@@ -872,7 +918,8 @@ sleepLink?.addEventListener('click', (e)=>{ e.preventDefault(); goToDream(); });
       DreamFX.concealTo(introDreamWindow, ()=>{
         // After contraction, hide site chrome
         siteHeader.hidden = true; mainSite.hidden = true;
-        showLive2D();
+        window.L2D
+        window.L2D.requestLoop('sleep'); 
         window.scrollTo({ top: 0, behavior: 'smooth' });
         try { cfg.speed = Math.min(cfg.speed, 4); cfg.speed = Math.max(0.8, cfg.speed - 1.5); } catch(e){}
       });
